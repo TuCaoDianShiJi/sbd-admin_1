@@ -17,18 +17,9 @@ const copyright = (
 );
 
 const UserLayout = props => {
-    const {
-        route = {
-            routes: [],
-        },
-    } = props;
+    const {  route = { routes: [], }, } = props;
     const { routes = [] } = route;
-    const {
-        children,
-        location = {
-            pathname: '',
-        },
-    } = props;
+    const { children, location = { pathname: '', }, } = props;
     const { breadcrumb } = getMenuData(routes);
     return (
         <DocumentTitle

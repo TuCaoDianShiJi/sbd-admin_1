@@ -34,7 +34,6 @@ class Index extends Component{
         const _that = this;
         request('/customer/getlist', { method: 'POST' })
         .then( res=>{
-            console.log(res)
             res.data.map(item=>{
                 item.key = item.id
             })
@@ -45,6 +44,12 @@ class Index extends Component{
         .catch( err=>{
             console.log(err)
         })
+    }
+
+    componentWillUnmount(){
+        this.setState = (state, callback) =>{
+            return;
+        }
     }
 
     // 表单查询
