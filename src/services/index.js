@@ -1,6 +1,11 @@
 import request from '@/utils/request';
 
-const path = 'http://192.168.3.23:8089';
+const path = '';
+
+// 获取短信验证码
+export async function getCaptcha(mobile){
+    return request(`${path}/getCaptcha?mobile=${mobile}`)
+}
 
 // 手机号验证码登录
 export async function userLogin(params){
@@ -8,4 +13,9 @@ export async function userLogin(params){
         method: 'POST',
         data: params,
     })
+}
+
+// 获取用户基本信息
+export async function getUserInfo(params){
+    return request(`${path}/manager/getUser`)
 }

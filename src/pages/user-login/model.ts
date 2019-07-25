@@ -1,7 +1,7 @@
 import { AnyAction, Reducer } from 'redux';
 import { EffectsCommandMap } from 'dva';
 import { routerRedux } from 'dva/router';
-import { fakeAccountLogin, getFakeCaptcha, userLogin } from './service';
+import { getCaptcha, userLogin } from '@/services';
 import { setCookie } from '../../utils/cookies';
 
 export interface StateType {
@@ -37,51 +37,37 @@ const Model: ModelType = {
     effects: {
         // 用户登录
         *login({ payload }, { call, put }) {
-            // const response = yield call(fakeAccountLogin, payload);
             let data = {
                 phone: payload.mobile,
                 verifyCode: payload.captcha
             }
-            const response = yield call(userLogin, data);
-            // 根据payload.type判断是短信验证码还是账号密码登录
-            // console.log(payload);
-            // yield put({
-            //     type: 'changeLoginStatus',
-            //     payload: response,
-            // });
-            // Login successfully
-            console.log(response);
-            return;
-            if (response.status === 'ok') {
-                // const urlParams = new URL(window.location.href);
-                // const params = getPageQuery();
-                // let { redirect } = params as { redirect: string };
-                // if (redirect) {
-                //     const redirectUrlParams = new URL(redirect);
-                //     if (redirectUrlParams.origin === urlParams.origin) {
-                //         redirect = redirect.substr(urlParams.origin.length);
-                //         if (redirect.match(/^\/.*#/)) {
-                //             redirect = redirect.substr(redirect.indexOf('#') + 1);
-                //         }
-                //     } else {
-                //         window.location.href = redirect;
-                //         return;
-                //     }
-                // }
+            let response = yield call(userLogin, data);
+            let _response = {
+                status: response.status,
+                type: 'mobile',
+                userId: response.id,
+                message: response.message,
+            }
+            yield put({
+                type: 'changeLoginStatus',
+                payload: _response,
+            });
+            // 登录成功页面跳转
+            if (response.status === 200) {
                 yield put(routerRedux.replace('/'));
             }
         },
 
         // 点击发送验证码
         *getCaptcha({ payload }, { call }) {
-            yield call(getFakeCaptcha, payload);
+            yield call(getCaptcha, payload);
         },
     },
 
     reducers: {
         changeLoginStatus(state, { payload }) {
-            setCookie('Authority', payload.currentAuthority, 1);
-            console.log(payload);
+            // 将userId放在cookie里面，设置过期时间为五天
+            setCookie('userId', payload.userId, 5);
             return {
                 ...state,
                 status: payload.status,

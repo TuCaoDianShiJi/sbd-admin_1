@@ -19,8 +19,12 @@ export async function userLogin(params: FromDataType){
     //     method: 'POST',
     //     data: params,
     // })
-    return request('http://192.168.3.23:8089/managerlogin/login', {
+    return request('/managerlogin/login', {
         method: 'POST',
-        data: params,
+        data: params
     })
+    // return request('http://192.168.3.23:8089/managerlogin/login', {
+    //     method: 'POST',
+    //     data: params,
+    // })
 }

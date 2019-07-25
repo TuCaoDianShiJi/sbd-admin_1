@@ -12,9 +12,10 @@ const Model = {
         status: undefined,
     },
     effects: {
+        // 退出登录
         *logout(_, { put }) {
             const { redirect } = getPageQuery(); // redirect
-            setCookie('Authority', ' ', -1);
+            setCookie('userId', ' ', -1);
             if (window.location.pathname !== '/user/login' && !redirect) {
                 yield put(
                     routerRedux.replace({

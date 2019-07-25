@@ -103,7 +103,6 @@ export default {
         {
             path: '/',
             component: '../layouts/BasicLayout',
-            Routes: ['src/pages/Authorized'],
             routes: [
                 { path: '/', redirect: '/customer/list' },
                 {

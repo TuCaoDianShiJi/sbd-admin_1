@@ -191,14 +191,14 @@ UserLoginState
                             ]}
                         />
                     </Tab>
-                    <div>
+                    {/* <div>
                         <Checkbox checked={autoLogin} onChange={this.changeAutoLogin}>
                             <FormattedMessage id="user-login.login.remember-me" />
                         </Checkbox>
-                        {/* <a style={{ float: 'right' }} href="">
+                        <a style={{ float: 'right' }} href="">
                             <FormattedMessage id="user-login.login.forgot-password" />
-                        </a> */}
-                    </div>
+                        </a>
+                    </div> */}
                     <Submit loading={submitting}>
                         <FormattedMessage id="user-login.login.login" />
                     </Submit>

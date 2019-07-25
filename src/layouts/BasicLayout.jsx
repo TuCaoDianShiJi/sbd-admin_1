@@ -37,9 +37,9 @@ const BasicLayout = props => {
             dispatch({
                 type: 'user/fetchCurrent',
             });
-            dispatch({
-                type: 'settings/getSetting',
-            });
+            // dispatch({
+            //     type: 'settings/getSetting',
+            // });
         }
     }, []);
 
@@ -49,7 +49,6 @@ const BasicLayout = props => {
             type: 'global/changeLayoutCollapsed',
             payload,
         });
-
     return (
         <ProLayout logo={logo}
             onCollapse={handleMenuCollapse}
