@@ -43,6 +43,7 @@ class Index extends Component {
         this.state = {
             groupList: [],
             showModalForm1: false,
+            showModalForm2: false
         };
     }
 
@@ -82,8 +83,15 @@ class Index extends Component {
         });
     };
 
+    // 点击超时设置编辑按钮
+    onEditRules(item){
+        this.setState({
+            showModalForm2: true
+        })
+    }
+
     render() {
-        const { groupList, showModalForm1 } = this.state;
+        const { groupList, showModalForm1, showModalForm2 } = this.state;
         const columns = [
             {
                 title: '分组名称',
@@ -94,7 +102,7 @@ class Index extends Component {
                 render: name => <span>{name}</span>,
             },
             {
-                title: '分配规则',
+                title: '超时设置',
                 dataIndex: 'rule',
                 key: 'rule',
                 align: 'center',
@@ -108,9 +116,9 @@ class Index extends Component {
                 width: 100,
                 render: (text, record) => (
                     <span>
-                        <a>
-                            <Icon type="edit" /> 编辑
-            </a>
+                        <a onClick={this.onEditRules.bind(this, record)}>
+                            <Icon type="edit"/> 编辑
+                        </a>
                         {/* <Divider type="vertical" />
                       <a><Icon type="delete" /> 删除</a> */}
                     </span>
@@ -122,10 +130,12 @@ class Index extends Component {
             labelCol: {
                 xs: { span: 24 },
                 sm: { span: 6 },
+                md: { span: 4 },
             },
             wrapperCol: {
                 xs: { span: 24 },
                 sm: { span: 16 },
+                md: { span: 20 },
             },
         };
         return (
@@ -211,11 +221,8 @@ class Index extends Component {
                             <Form.Item label="设置上限">
                                 {getFieldDecorator('limit', {
                                     rules: [{ required: true, message: '请设置上限' }],
-                                })(
-                                    <div>
-                                        <InputNumber /> 人
-                  </div>,
-                                )}
+                                })(<InputNumber />
+                                )} 人
                             </Form.Item>
                             <div className={styles.btnContent}>
                                 <Button className={styles.btn}
@@ -224,6 +231,49 @@ class Index extends Component {
                                 <Button type="primary" htmlType="submit" className={styles.btn}>设置</Button>
                             </div>
                         </Form>
+                    </Modal>
+                    <Modal visible={showModalForm2}
+                        title='超时设置'
+                        onCancel={() => this.setState({ showModalForm2: false })}
+                        footer={null}
+                    >         
+                        <Form {...formItemLayout}>
+                            <Form.Item label="超时提醒" style={{ marginBottom: '10px' }}>
+                                超过 {getFieldDecorator('timeout', {
+                                    initialValue: '',
+                                })(
+                                    <Select style={{ width: '95px' }}>
+                                        <Option value="">不设置</Option>
+                                        <Option value="30秒">30秒</Option>
+                                        <Option value="1分钟">1分钟</Option>
+                                        <Option value="1分30秒">1分30秒</Option>
+                                        <Option value="2分钟">2分钟</Option>
+                                        <Option value="2分20秒">2分20秒</Option>
+                                        <Option value="3分钟">3分钟</Option>
+                                    </Select>
+                                )} 接待人员未回复，发送超时提醒
+                            </Form.Item>
+                            <Form.Item label="重新分配" style={{ marginBottom: '10px' }}>
+                                超过 {getFieldDecorator('again_allocate', {
+                                    initialValue: '',
+                                })(<Select style={{ width: '95px' }}>
+                                        <Option value="">不设置</Option>
+                                        <Option value="30秒">30秒</Option>
+                                        <Option value="1分钟">1分钟</Option>
+                                        <Option value="1分30秒">1分30秒</Option>
+                                        <Option value="2分钟">2分钟</Option>
+                                        <Option value="2分20秒">2分20秒</Option>
+                                        <Option value="3分钟">3分钟</Option>
+                                    </Select>
+                                )} 接待人员未回复，按空闲率进行重新分配
+                            </Form.Item>
+                            <div className={styles.btnContent}>
+                                <Button className={styles.btn}
+                                    onClick={_ => this.setState({ showModalForm2: false })}
+                                >取消</Button>
+                                <Button type="primary" htmlType="submit" className={styles.btn}>设置</Button>
+                            </div>
+                        </Form>        
                     </Modal>
                 </div>
             </PageHeaderWrapper>

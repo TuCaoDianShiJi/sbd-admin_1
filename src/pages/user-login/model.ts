@@ -2,7 +2,6 @@ import { AnyAction, Reducer } from 'redux';
 import { EffectsCommandMap } from 'dva';
 import { routerRedux } from 'dva/router';
 import { fakeAccountLogin, getFakeCaptcha, userLogin } from './service';
-import { getPageQuery, setAuthority } from './utils/utils';
 import { setCookie } from '../../utils/cookies';
 
 export interface StateType {
@@ -36,14 +35,23 @@ const Model: ModelType = {
     },
 
     effects: {
+        // 用户登录
         *login({ payload }, { call, put }) {
             // const response = yield call(fakeAccountLogin, payload);
-            const response = yield call(userLogin, payload);
-            yield put({
-                type: 'changeLoginStatus',
-                payload: response,
-            });
+            let data = {
+                phone: payload.mobile,
+                verifyCode: payload.captcha
+            }
+            const response = yield call(userLogin, data);
+            // 根据payload.type判断是短信验证码还是账号密码登录
+            // console.log(payload);
+            // yield put({
+            //     type: 'changeLoginStatus',
+            //     payload: response,
+            // });
             // Login successfully
+            console.log(response);
+            return;
             if (response.status === 'ok') {
                 // const urlParams = new URL(window.location.href);
                 // const params = getPageQuery();
@@ -64,15 +72,16 @@ const Model: ModelType = {
             }
         },
 
-        // *getCaptcha({ payload }, { call }) {
-        //     yield call(getFakeCaptcha, payload);
-        // },
+        // 点击发送验证码
+        *getCaptcha({ payload }, { call }) {
+            yield call(getFakeCaptcha, payload);
+        },
     },
 
     reducers: {
         changeLoginStatus(state, { payload }) {
             setCookie('Authority', payload.currentAuthority, 1);
-            // setAuthority(payload.currentAuthority);
+            console.log(payload);
             return {
                 ...state,
                 status: payload.status,

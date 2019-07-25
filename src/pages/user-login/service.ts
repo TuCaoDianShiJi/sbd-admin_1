@@ -8,12 +8,18 @@ export async function fakeAccountLogin(params: FromDataType) {
     });
 }
 
+// 获取短信验证码
 export async function getFakeCaptcha(mobile: string) {
     return request(`/api/login/captcha?mobile=${mobile}`);
 }
 
+// 用户登录
 export async function userLogin(params: FromDataType){
-    return request('/api/user/login', {
+    // return request('/api/user/login', {
+    //     method: 'POST',
+    //     data: params,
+    // })
+    return request('http://192.168.3.23:8089/managerlogin/login', {
         method: 'POST',
         data: params,
     })
