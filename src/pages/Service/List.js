@@ -14,6 +14,8 @@ import {
     Checkbox,
 } from 'antd';
 import { PageHeaderWrapper } from '@ant-design/pro-layout';
+import { getCustServiceList } from '@/services';
+import { connect } from 'dva';
 import request from '../../utils/request';
 
 import styles from './list.less';
@@ -46,7 +48,6 @@ const plainOptions = [
     '产品质量检测',
     '其他',
 ];
-
 class Index extends Component {
     constructor(props) {
         super(props);
@@ -60,18 +61,23 @@ class Index extends Component {
 
     componentDidMount() {
         const _that = this;
-        request('/service/getlist', { method: 'POST' })
-            .then(res => {
-                res.data.map(item => {
-                    item.key = item.id;
-                });
-                _that.setState({
-                    serviceList: res.data,
-                });
-            })
-            .catch(err => {
-                console.log(err);
-            });
+        // request('http://192.168.3.23:8089//managercust/getCustService', { method: 'POST', data:{ page: 1, limit: 15 } })
+        //     .then(res => {
+        //         console.log(res)
+        //     })
+        //     .catch(err => {
+        //         console.log(err);
+        //     });
+        // this.getCustserviceList();
+    }
+
+    // 获取客服列表
+    getCustserviceList(page=1,limit=10){
+        const { dispatch } = this.props;
+        let data = {
+            page, limit
+        }
+        dispatch({type: 'custservice/getList', payload: data});
     }
 
     // 新增客服按钮

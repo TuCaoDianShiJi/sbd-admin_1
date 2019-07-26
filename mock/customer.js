@@ -14,6 +14,7 @@ export default {
             'adress': '@city(true)',
             'belong': '@cname',
             'recently': '@date'
-        }]
+        }],
+        total: 50
     })
 }

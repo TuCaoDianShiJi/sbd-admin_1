@@ -221,13 +221,11 @@ export default {
         basePath: '/',
     },
     chainWebpack: webpackPlugin,
-    /*
-      proxy: {
-        '/server/api/': {
-          target: 'https://preview.pro.ant.design/',
-          changeOrigin: true,
-          pathRewrite: { '^/server': '' },
+    proxy: {
+        '/server': {
+            target: 'http://192.168.3.23:8089',
+            changeOrigin: true,
+            pathRewrite: { '^/server': '' }
         },
-      },
-      */
+    },
 };

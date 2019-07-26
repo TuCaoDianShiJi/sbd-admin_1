@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import { Form, Input, Row, Col, Button, Select, Table } from 'antd';
 import { PageHeaderWrapper } from '@ant-design/pro-layout';
 import request from '../../utils/request';
+import { connect } from 'dva';
 
 const { Option } = Select;
 const columns = [
@@ -21,6 +22,9 @@ const columns = [
         render: text=>(<span>{text}</span>)
     },
 ]
+@connect(({ customer, user })=>({
+    customer, user
+}))
 class Index extends Component{
 
     constructor(props){
@@ -31,21 +35,18 @@ class Index extends Component{
     }
 
     componentDidMount(){
-        const _that = this;
-        request('/customer/getlist', { method: 'POST' })
-        .then( res=>{
-            res.data.map(item=>{
-                item.key = item.id
-            })
-            _that.setState({
-                customerList: res.data
-            })
-        })
-        .catch( err=>{
-            console.log(err)
-        })
+        this.getCustomerList();
+        console.log(this.props.user)
     }
 
+    // 获取客户列表
+    getCustomerList(page=1, pageSize=15){
+        const { dispatch } = this.props;
+        let data = { page, pageSize }
+        dispatch({type:'customer/getList', payload: data})
+    }
+
+    // 组件卸载
     componentWillUnmount(){
         this.setState = (state, callback) =>{
             return;
@@ -69,16 +70,17 @@ class Index extends Component{
     
     // 分页页码切换
     onPageChange(page, pageSize){
-        console.log(page, pageSize)
+        this.getCustomerList(page, pageSize)
     }
 
     // 分页长度页面
     onShowSizeChange(current, size){
-        console.log(current, size)
+        this.getCustomerList(current, size)
     }
 
     render(){
         const { customerList } = this.state;
+        const { customer } = this.props;
         const { getFieldDecorator } = this.props.form;
         const formItemLayout = {
             labelCol: {
@@ -121,13 +123,15 @@ class Index extends Component{
                         </Col>
                         <Col xs={20} sm={11} md={10} lg={9} xl={6}>
                             <Form.Item label="客户归属人" name='belong'>
-                                <Select defaultValue='全部' onChange={this.onBelongChange.bind(this)}>
-                                    <Option value="全部">全部</Option>
+                                {getFieldDecorator('belong',{
+                                       initialValue: ''
+                                   })(<Select>
+                                    <Option value="">全部</Option>
                                     <Option value="张波">张波</Option>
                                     <Option value="欧宜">欧宜</Option>
                                     <Option value="王玉龙">王玉龙</Option>
                                     <Option value="袁佳伟">袁佳伟</Option>
-                                </Select>
+                                </Select>)}
                             </Form.Item>
                         </Col>
                         <Col xs={20} sm={11} md={4} lg={2} xl={2}>
@@ -137,10 +141,13 @@ class Index extends Component{
                         </Col>
                     </Row>
                 </Form>
-                <Table bordered columns={columns} dataSource={customerList}
+                <div  style={{marginBottom: '15px', textAlign: 'right'}}>
+                    <Button type='primary' icon='download'>导出</Button>
+                </div>
+                <Table bordered columns={columns} dataSource={customer.list}
                     rowSelection={rowSelection}
                     pagination={{
-                        total: 50,
+                        total: customer.total,
                         showSizeChanger: true,
                         onChange:this.onPageChange.bind(this),
                         pageSizeOptions: ['10', '15', '20'],

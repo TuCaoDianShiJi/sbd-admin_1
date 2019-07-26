@@ -12,6 +12,8 @@ import {
     Modal,
     Form,
     Checkbox,
+    Spin,
+    Input
 } from 'antd';
 import request from '../../utils/request';
 import img1 from '../../assets/allocate_01.png';
@@ -129,13 +131,13 @@ class Index extends Component {
         const formItemLayout = {
             labelCol: {
                 xs: { span: 24 },
-                sm: { span: 6 },
-                md: { span: 4 },
+                sm: { span: 8 },
+                md: { span: 6 },
             },
             wrapperCol: {
                 xs: { span: 24 },
-                sm: { span: 16 },
-                md: { span: 20 },
+                sm: { span: 14 },
+                md: { span: 17 },
             },
         };
         return (
@@ -206,7 +208,7 @@ class Index extends Component {
                             <p>每次修改设置，将在第二天零点生效，同时影响所有统计报表的会话统计数量</p>
                         </Col>
                     </Row>
-                    <Modal
+                    <Modal maskClosable={false}
                         visible={showModalForm1}
                         title="修改上限"
                         onCancel={() => this.setState({ showModalForm1: false })}
@@ -233,10 +235,13 @@ class Index extends Component {
                         </Form>
                     </Modal>
                     <Modal visible={showModalForm2}
+                        maskClosable={false}
                         title='超时设置'
+                        width={620}
                         onCancel={() => this.setState({ showModalForm2: false })}
                         footer={null}
-                    >         
+                    >    
+                    <Spin spinning={false}> 
                         <Form {...formItemLayout}>
                             <Form.Item label="超时提醒" style={{ marginBottom: '10px' }}>
                                 超过 {getFieldDecorator('timeout', {
@@ -267,13 +272,20 @@ class Index extends Component {
                                     </Select>
                                 )} 接待人员未回复，按空闲率进行重新分配
                             </Form.Item>
+                            <Form.Item label="客服提示语" style={{ marginBottom: '10px' }}>
+                                {getFieldDecorator('marked_words', {
+                                    initialValue: '客服正忙，推荐您联系转接客服，感谢理解！',
+                                })(<Input />
+                                )}
+                            </Form.Item>
                             <div className={styles.btnContent}>
                                 <Button className={styles.btn}
                                     onClick={_ => this.setState({ showModalForm2: false })}
                                 >取消</Button>
                                 <Button type="primary" htmlType="submit" className={styles.btn}>设置</Button>
                             </div>
-                        </Form>        
+                        </Form> 
+                        </Spin>       
                     </Modal>
                 </div>
             </PageHeaderWrapper>

@@ -1,18 +1,18 @@
 import React, { Component } from 'react';
-import { Table, Button, Divider, Icon, Modal, Form, Input, Checkbox, Select, Cascader, Tooltip } from 'antd';
+import { Table, Button, Divider, Icon, Modal, Form, Input, Checkbox, Select, Cascader, Tooltip, Spin, message } from 'antd';
 import { PageHeaderWrapper } from '@ant-design/pro-layout';
 import request from '../../utils/request';
+import { getAllocateGroupList, getCustServiceAll, addAllocateGroup } from '@/services';
 
 import styles from './setting.less';
 
 const CheckboxGroup = Checkbox.Group;
 const { Option } = Select;
-let toolTip = `1、优先归属人：客户有归属人时，分配给归属人接待。/n        2、优先上次接待人：客户有上次接待人时，分配给上次接待人优先接待。
-3、按空闲率分配：将客户分配给当前空闲率最高的客服
-                          空闲率=（接待上限-当前接待客户数）/ 接待上限
-                          例：员工A当前接待2人，上限5人，空闲率=（5-2）/ 5=60%
-4、按客户接待数分配：将客户分配给当前接待数最少的员工
-5、轮流分分配：将客户轮流分配给员工`
+let toolTip = `1.优先归属人:客户有归属人时,分配给归属人接待;
+2.优先上次接待人:客户有上次接待人时,分配给上次接待人优先接待;
+3.按空闲率分配:将客户分配给当前空闲率最高的 客服空闲率=(接待上限-当前接待客户数)/接待上限 例：员工A当前接待2人，上限5人，空闲率=(5-2)/5=60%;
+4.按客户接待数分配:将客户分配给当前接待数最少的员工;
+5.轮流分分配:将客户轮流分配给员工`
 
 const plainOptions = ['张波', '王玉龙', '欧宜', '袁佳伟'];
 const orderOptions = [
@@ -63,11 +63,38 @@ class Index extends Component {
         this.state = {
             dataList: [],
             showModalForm: false,
+            serviceAllOptions: [],
+            formSubmitLoading: false
         };
     }
 
     componentDidMount() {
         this.getList();
+        
+    }
+
+    // 获取所有员工列表(只有id和name)
+    getServiceAll(){
+        let _that = this;
+        getCustServiceAll()
+        .then(res=>{
+            let list = [];
+            if(res.status === 200){
+                res.data.map(item=>{
+                    list.push({
+                        label: item.name,
+                        value: item.id
+                    })
+                })
+                console.log(list);
+                _that.setState({
+                    serviceAllOptions: list
+                })
+            }
+        })
+        .catch(err=>{
+            console.log(err)
+        })
     }
 
     // 获取分组列表
@@ -103,23 +130,46 @@ class Index extends Component {
 
     // 新建分组按钮
     addGroup() {
+        this.getServiceAll();
         this.setState({
             showModalForm: true,
         });
     }
 
-    // 提交表单
+    // 提交新建会话分组表单
     handleSubmit = e => {
+        const _that = this;
         e.preventDefault();
         this.props.form.validateFields((err, values) => {
             if (!err) {
-                console.log('Received values of form: ', values);
+                _that.setState({
+                    formSubmitLoading: true
+                })
+                addAllocateGroup(values)
+                .then(res=>{
+                    message.success('新增分组成功')
+                    _that.setState({
+                        formSubmitLoading: false,
+                    })
+                    _that.closeFormModal();
+                })
+                .catch(err=>{
+                    console.log(err)
+                })
             }
         });
     };
 
+    // 关闭新增分组弹框Modal
+    closeFormModal(){
+        this.props.form.resetFields();
+        this.setState({
+            showModalForm: false
+        })
+    }
+
     render() {
-        const { dataList, showModalForm } = this.state;
+        const { dataList, showModalForm, serviceAllOptions, formSubmitLoading } = this.state;
         const { getFieldDecorator } = this.props.form;
         const columns = [
             {
@@ -161,13 +211,9 @@ class Index extends Component {
                 width: 200,
                 render: (text, record) => (
                     <span>
-                        <a onClick={this.onEditItem.bind(this, record)}>
-                            <Icon type="edit" /> 编辑
-            </a>
+                        <a onClick={this.onEditItem.bind(this, record)}><Icon type="edit" /> 编辑</a>
                         <Divider type="vertical" />
-                        <a onClick={this.onDeletItem.bind(this, record)}>
-                            <Icon type="delete" /> 删除
-            </a>
+                        <a onClick={this.onDeletItem.bind(this, record)}><Icon type="delete" /> 删除</a>
                     </span>
                 ),
             },
@@ -192,14 +238,15 @@ class Index extends Component {
           </Button>
                 </div>
                 <Table bordered columns={columns} dataSource={dataList} />
-                <Modal
+                <Modal maskClosable={false}
                     visible={showModalForm}
                     title="新增分组"
                     footer={null}
                     width={720}
-                    onCancel={() => this.setState({ showModalForm: false })}
+                    onCancel={this.closeFormModal.bind(this)}
                 >
-                    <Form {...formItemLayout} onSubmit={this.handleSubmit}>
+                    <Spin spinning={formSubmitLoading}>
+                    <Form {...formItemLayout} onSubmit={this.handleSubmit.bind(this)}>
                         <Form.Item label="分组名称" style={{ marginBottom: '10px' }}>
                             {getFieldDecorator('group_name', {
                                 rules: [{ required: true, message: '请填写分组名称' }],
@@ -208,7 +255,7 @@ class Index extends Component {
                         <Form.Item label="接待人" style={{ marginBottom: '10px' }}>
                             {getFieldDecorator('receiver', {
                                 rules: [{ required: true, message: '请选择接待人' }],
-                            })(<CheckboxGroup options={plainOptions} />)}
+                            })(<CheckboxGroup options={serviceAllOptions} />)}
                         </Form.Item>
                         <Form.Item label="分配对象" style={{ marginBottom: '10px' }}>
                             {getFieldDecorator('allocate_object', {
@@ -233,39 +280,45 @@ class Index extends Component {
                         </Form.Item>
                         <Form.Item label="超时提醒" style={{ marginBottom: '10px' }}>
                             超过 {getFieldDecorator('timeout', {
-                                initialValue: '',
+                                initialValue: 0,
                             })(
                                 <Select style={{ width: '95px' }}>
-                                    <Option value="">不设置</Option>
-                                    <Option value="30秒">30秒</Option>
-                                    <Option value="1分钟">1分钟</Option>
-                                    <Option value="1分30秒">1分30秒</Option>
-                                    <Option value="2分钟">2分钟</Option>
-                                    <Option value="2分20秒">2分20秒</Option>
-                                    <Option value="3分钟">3分钟</Option>
+                                    <Option value={0}>不设置</Option>
+                                    <Option value={30}>30秒</Option>
+                                    <Option value={60}>1分钟</Option>
+                                    <Option value={90}>1分30秒</Option>
+                                    <Option value={120}>2分钟</Option>
+                                    <Option value={150}>2分30秒</Option>
+                                    <Option value={180}>3分钟</Option>
                                 </Select>
                             )} 接待人员未回复，发送超时提醒
                         </Form.Item>
                         <Form.Item label="重新分配" style={{ marginBottom: '10px' }}>
                             超过 {getFieldDecorator('again_allocate', {
-                                initialValue: '',
+                                initialValue: 0,
                             })(<Select style={{ width: '95px' }}>
-                                    <Option value="">不设置</Option>
-                                    <Option value="30秒">30秒</Option>
-                                    <Option value="1分钟">1分钟</Option>
-                                    <Option value="1分30秒">1分30秒</Option>
-                                    <Option value="2分钟">2分钟</Option>
-                                    <Option value="2分20秒">2分20秒</Option>
-                                    <Option value="3分钟">3分钟</Option>
+                                    <Option value={0}>不设置</Option>
+                                    <Option value={30}>30秒</Option>
+                                    <Option value={60}>1分钟</Option>
+                                    <Option value={90}>1分30秒</Option>
+                                    <Option value={120}>2分钟</Option>
+                                    <Option value={150}>2分30秒</Option>
+                                    <Option value={180}>3分钟</Option>
                                 </Select>
                             )} 接待人员未回复，按空闲率进行重新分配
                         </Form.Item>
+                        <Form.Item label="客服提示语" style={{ marginBottom: '10px' }}>
+                            {getFieldDecorator('marked_words', {
+                                initialValue: '客服正忙，推荐您联系转接客服，感谢理解！',
+                            })(<Input />
+                            )}
+                        </Form.Item>
                         <div className={styles.btnContent}>
-                            <Button type="primary" htmlType="submit">
-                                提交
-              </Button>
+                            <Button className={styles.btn} onClick={this.closeFormModal.bind(this)}>取消</Button>
+                            <Button type="primary" htmlType="submit" className={styles.btn}>提交</Button>
                         </div>
                     </Form>
+                    </Spin>
                 </Modal>
             </PageHeaderWrapper>
         );
