@@ -1,21 +1,39 @@
-import Mock from 'mockjs';
-
-const Random = Mock.Random;
-
-Random.cname();
-Random.city(true);
-Random.date();
-
 export default {
-    'POST /service/getlist': Mock.mock({
-        'data|50': [{
-            'id|+1': 1,
-            'name': '@cname',
-            'gender|0-1': 1,
-            'department|1': ['客服部', '市场部', '技术部'],
-            'position|1': ['驻场客服', '网络客服'],
-            'focuson|1': ['创业专项', '公积金开户', '工商注册'],
-            'wechat': /^1[385][1-9]\d{8}/,
-        }]
-    })
+    'POST /service/getlist': (req, res)=>{
+        res.send({
+            status: 200,
+            message: 'success',
+            total: 2,
+            data: [
+                {
+                    id: '001',
+                    account: 'wangrong001',
+                    password: '123456',
+                    name: '王玉龙',
+                    gender: 1,
+                    phone: 13012345678,
+                    email: '',
+                    department: '客服部',
+                    position: '一般员工',
+                    wechat: 'wechat001',
+                    nickname: '昵称1',
+                    attention: ['商标注册', '版权登记', '专利申请']
+                },
+                {
+                    id: '002',
+                    account: 'wangrong002',
+                    password: '123456',
+                    name: '欧易',
+                    gender: 1,
+                    phone: 13012345678,
+                    email: '',
+                    department: '客服部',
+                    position: '部门主管',
+                    wechat: 'wechat002',
+                    nickname: '昵称2',
+                    attention: ['商标注册', '版权登记', '专利申请']
+                }
+            ]
+        })
+    }
 }

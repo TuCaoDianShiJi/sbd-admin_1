@@ -10,10 +10,10 @@ export async function getCaptcha(mobile){
 
 // 手机号验证码登录
 export async function userLogin(params){
-    return request(`${path}/managerlogin/login`, {
-        method: 'POST',
-        data: params,
-    })
+    // return request(`${path}/managerlogin/login`, {
+    //     method: 'POST',
+    //     data: params,
+    // })
     // mock数据
     return request(`/managerlogin/login`, {
         method: 'POST',
@@ -40,7 +40,12 @@ export async function getCustomerList(params){
 
 // 获取客服列表
 export async function getCustServiceList(params){
-    return request(`${path}/managercust/getcustservice`, {
+    // return request(`${path}/managercust/getcustservice`, {
+    //     method: 'POST',
+    //     data: params
+    // })
+    // mock数据
+    return request('/service/getlist', {
         method: 'POST',
         data: params
     })

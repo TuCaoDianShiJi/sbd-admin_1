@@ -1,74 +1,79 @@
 import React, { Component } from 'react';
 import { PageHeaderWrapper } from '@ant-design/pro-layout';
-import { Row, Col, Radio, Input, Select } from 'antd';
+import { Form, Input, Select, Button } from 'antd';
 
 import styles from './record.less';
 
-const listData = ['张波', '王玉龙', '欧宜', '袁佳伟'];
-const otherData = ['杨过', '张无忌', '令狐冲'];
+const serviData = ['张波', '王玉龙', '欧宜', '袁佳伟'];
+const customerData = ['杨过', '张无忌', '令狐冲'];
 const { Search } = Input;
 const { Option } = Select;
 
 class Index extends Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      checkedName: '',
-    };
-  }
+    constructor(props) {
+        super(props);
+        this.state = {
+            serviData: [],
+            customerData: []
+        };
+    }
 
-  // 点击员工单选按钮
-  onCheckedName(e) {
-    this.setState({
-      checkedName: e.target.value,
-    });
-  }
+    // 提交查询表单
+    onFormSubmit = e=>{
+        e.preventDefault();
+        this.props.form.validateFields((err, values) => {
+            if (!err) {
+              console.log(values);
+            }
+        });
+    }
 
-  render() {
-    const { checkedName } = this.state;
-    const radioStyle = {
-      display: 'block',
-      height: '30px',
-      lineHeight: '30px',
-    };
-    return (
-      <PageHeaderWrapper>
-        <Row className={styles.record}>
-          <Col xs={24} sm={12} md={6} lg={6} xl={4} className={styles.leftContainer}>
-            <Col span={24}>
-              <Search placeholder="请输入员工姓名" style={{ width: 150 }} />
-            </Col>
-            <Col span={24}>
-              <Radio.Group className={styles.radioGroup} onChange={this.onCheckedName.bind(this)}>
-                {listData.map((item, index) => (
-                  <Radio style={radioStyle} value={item} key={index}>
-                    {item}
-                  </Radio>
-                ))}
-              </Radio.Group>
-            </Col>
-          </Col>
-          <Col xs={24} sm={12} md={18} lg={18} xl={20} className={styles.rightContainer}>
-            {checkedName !== '' ? (
-              <div>
-                {checkedName} 与{' '}
-                <Select placeholder="请选择" style={{ width: 130 }}>
-                  {otherData.map((item, index) => (
-                    <Option value={item} key={index}>
-                      {item}
-                    </Option>
-                  ))}
-                </Select>{' '}
-                的聊天记录
-              </div>
-            ) : (
-              ''
-            )}
-          </Col>
-        </Row>
-      </PageHeaderWrapper>
-    );
-  }
+    // 选择员工下拉框改变，然后请求对应客户列表的接口
+    onSelectChange = e =>{
+        
+    }
+
+    render() {
+        const { getFieldDecorator } = this.props.form;
+        return (
+            <PageHeaderWrapper>
+                <Form layout='inline' onSubmit={this.onFormSubmit.bind(this)}>
+                    <Form.Item label='客服姓名'>
+                        {getFieldDecorator('service_name',{
+                            rules: [{ required: true, message: '请选择员工' }],
+                            initialValue: ''
+                        })(<Select showSearch style={{width: 200}}
+                            onChange={this.onSelectChange.bind(this)}
+                            filterOption={(input, option) =>
+                                option.props.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                            }
+                        >
+                            <Option value=''>请选择或输入查询</Option>
+                            { serviData.map((item, index)=><Option key={index}>{item}</Option>) }
+                        </Select>)}
+                    </Form.Item>
+                    <Form.Item label='客户姓名'>
+                        {getFieldDecorator('customer_name',{
+                            rules: [{ required: true, message: '请选择客户' }],
+                            initialValue: ''
+                        })(<Select showSearch style={{width: 200}}
+                            filterOption={(input, option) =>
+                                option.props.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                            }
+                        >
+                            <Option value=''>请选择或输入查询</Option>
+                            { customerData.map((item, index)=><Option key={index}>{item}</Option>) }
+                        </Select>)}
+                    </Form.Item>
+                    <Form.Item>
+                        <Button type='primary' icon='search' htmlType='submit'>查询记录</Button>
+                    </Form.Item>
+                </Form>
+            </PageHeaderWrapper>
+        );
+    }
 }
 
-export default Index;
+const WrappedNormalLoginForm = Form.create({ name: 'normal_login' })(Index);
+
+export default WrappedNormalLoginForm;

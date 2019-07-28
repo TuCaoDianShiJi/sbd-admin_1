@@ -52,32 +52,33 @@ class Index extends Component {
     constructor(props) {
         super(props);
         this.state = {
-            serviceList: [],
-            showModalForm: false,
-            modalTitle: '',
-            formContainer: {},
+            serviceList: [],                // 客户列表数组
+            showModalForm: false,           // 是否显示弹框
+            modalTitle: '',                 // 弹框标题
+            formContainer: {},              // 表单内容，点编辑时填充，关闭时清空
+            showTableLoading: false         // 表格加载状态
         };
     }
 
     componentDidMount() {
-        const _that = this;
-        // request('http://192.168.3.23:8089//managercust/getCustService', { method: 'POST', data:{ page: 1, limit: 15 } })
-        //     .then(res => {
-        //         console.log(res)
-        //     })
-        //     .catch(err => {
-        //         console.log(err);
-        //     });
-        // this.getCustserviceList();
+        this.getServiceList();
     }
 
     // 获取客服列表
-    getCustserviceList(page=1,limit=10){
-        const { dispatch } = this.props;
-        let data = {
-            page, limit
+    getServiceList =  async (page=1, limit=10)=>{
+        let _that = this;
+        _that.setState({
+            showTableLoading: true
+        })
+        let data = { page, limit };
+        let res = await getCustServiceList(data);
+        if(res.status === 200){
+            await res.data.map(item => item.key = item.id)
+            _that.setState({
+                serviceList: res,
+                showTableLoading: false
+            })
         }
-        dispatch({type: 'custservice/getList', payload: data});
     }
 
     // 新增客服按钮
@@ -90,24 +91,26 @@ class Index extends Component {
 
     // 关闭弹窗
     ModalFormClose() {
+        this.props.form.resetFields();  // 关闭弹窗时清空表单
         this.setState({
             showModalForm: false,
+            formContainer: {}
         });
     }
 
     // 编辑按钮
-    onEditItem(id) {
-        console.log(id);
+    onEditItem(record) {
         this.setState({
             showModalForm: true,
             modalTitle: '编辑客服',
+            formContainer: record
         });
     }
 
     // 删除按钮
     onDeletItem(record) {
         confirm({
-            title: `确定要删除 ${record.name} 吗？`,
+            title: `确定要删除 ${record.account} 吗？`,
             okText: '删除',
             okType: 'danger',
             cancelText: '取消',
@@ -137,64 +140,33 @@ class Index extends Component {
     };
 
     render() {
-        const { serviceList, showModalForm, modalTitle } = this.state;
+        const { serviceList, showModalForm, modalTitle, formContainer, showTableLoading } = this.state;
         const columns = [
-            {
-                title: '姓名(登陆账号名)',
-                dataIndex: 'name',
-                key: 'name',
-                align: 'center',
-                width: 150,
-                render: id => <span>{id}</span>,
+            { title: '姓名(登陆账号名)', dataIndex: 'account', key: 'account', align: 'center', width: 150,
+                render: (id, record) => `${record.name}(${record.account})`,
             },
-            {
-                title: '性别',
-                dataIndex: 'gender',
-                key: 'gender',
-                align: 'center',
-                width: 80,
+            { title: '性别', dataIndex: 'gender', key: 'gender', align: 'center', width: 80,
                 render: gender => (gender ? <span>男</span> : <span>女</span>),
             },
-            {
-                title: '所属部门',
-                dataIndex: 'department',
-                key: 'department',
-                align: 'center',
-                width: 150,
+            { title: '所属部门', dataIndex: 'department', key: 'department', align: 'center', width: 150,
                 render: text => <span>{text}</span>,
             },
-            {
-                title: '当前职务',
-                dataIndex: 'position',
-                key: 'position',
-                align: 'center',
-                width: 120,
+            { title: '当前职务', dataIndex: 'position', key: 'position', align: 'center', width: 120,
                 render: text => <span>{text}</span>,
             },
-            {
-                title: '关注的服务领域',
-                dataIndex: 'focuson',
-                key: 'focuson',
-                align: 'center',
-                width: 200,
+            { title: '关注的服务领域', dataIndex: 'attention', key: 'attention', align: 'center', width: 200,
+                render: attention=>{
+                    let a = attention.join('，')
+                    return <span>{a}</span>
+                },
+            },
+            { title: '微信号', dataIndex: 'wechat', key: 'wechat', align: 'center', width: 200,
                 render: text => <span>{text}</span>,
             },
-            {
-                title: '微信号',
-                dataIndex: 'wechat',
-                key: 'wechat',
-                align: 'center',
-                width: 200,
-                render: text => <span>{text}</span>,
-            },
-            {
-                title: '操作',
-                key: 'action',
-                align: 'center',
-                width: 200,
+            { title: '操作', key: 'action', align: 'center', width: 200,
                 render: (text, record) => (
                     <span>
-                        <a onClick={this.onEditItem.bind(this, record.id)}>
+                        <a onClick={this.onEditItem.bind(this, record)}>
                             <Icon type="edit" /> 编辑</a>
                         <Divider type="vertical" />
                         <a onClick={this.onDeletItem.bind(this, record)}>
@@ -203,15 +175,15 @@ class Index extends Component {
                 ),
             },
         ];
-        const rowSelection = {
-            onChange: (selectedRowKeys, selectedRows) => {
-                console.log(`selectedRowKeys: ${selectedRowKeys}`, 'selectedRows: ', selectedRows);
-            },
-            getCheckboxProps: record => ({
-                disabled: record.name === 'Disabled User', // Column configuration not to be checked
-                name: record.name,
-            }),
-        };
+        // const rowSelection = {
+        //     onChange: (selectedRowKeys, selectedRows) => {
+        //         console.log(`selectedRowKeys: ${selectedRowKeys}`, 'selectedRows: ', selectedRows);
+        //     },
+        //     getCheckboxProps: record => ({
+        //         disabled: record.name === 'Disabled User', // Column configuration not to be checked
+        //         name: record.name,
+        //     }),
+        // };
         const { getFieldDecorator } = this.props.form;
         const formItemLayout = {
             labelCol: {
@@ -226,16 +198,13 @@ class Index extends Component {
         return (
             <PageHeaderWrapper>
                 <div className={styles.serviceList}>
-                    <Button type="primary" icon="plus" onClick={this.addService.bind(this)}>
-                        新增客服
-          </Button>
+                    <Button type="primary" icon="plus" onClick={this.addService.bind(this)}>新增客服</Button>
                 </div>
-                <Table bordered
+                <Table bordered loading={showTableLoading}
                     columns={columns}
-                    dataSource={serviceList}
-                    rowSelection={rowSelection}
+                    dataSource={serviceList.data}
                     pagination={{
-                        total: 50,
+                        total: serviceList.total,
                         showSizeChanger: true,
                         onChange: this.onPageChange.bind(this),
                         pageSizeOptions: ['10', '15', '20'],
@@ -253,20 +222,25 @@ class Index extends Component {
                         <Form.Item label="登录账号" style={{ marginBottom: '5px' }}>
                             {getFieldDecorator('account', {
                                 rules: [{ required: true, message: '请填写登录账号' }],
-                            })(<Input placeholder="请填写登录账号" />)}
+                                initialValue: formContainer.account || ''
+                            })(<Input placeholder="请填写登录账号"/>)}
                         </Form.Item>
                         <Form.Item label="登录密码" style={{ marginBottom: '5px' }}>
                             {getFieldDecorator('password', {
                                 rules: [{ required: true, message: '请填写登录密码' }],
+                                initialValue: formContainer.password || ''
                             })(<Input placeholder="请填写登录密码" />)}
                         </Form.Item>
                         <Form.Item label="员工姓名" style={{ marginBottom: '5px' }}>
                             {getFieldDecorator('name', {
                                 rules: [{ required: true, message: '请填写员工姓名' }],
+                                initialValue: formContainer.name || ''
                             })(<Input placeholder="请填写员工姓名" />)}
                         </Form.Item>
                         <Form.Item label="员工性别" style={{ marginBottom: '5px' }}>
-                            {getFieldDecorator('gender', {})(
+                            {getFieldDecorator('gender', {
+                                initialValue: formContainer.gender || ''
+                            })(
                                 <Radio.Group>
                                     <Radio value={1}>男</Radio>
                                     <Radio value={0}>女</Radio>
@@ -274,14 +248,19 @@ class Index extends Component {
                             )}
                         </Form.Item>
                         <Form.Item label="手机号码" style={{ marginBottom: '5px' }}>
-                            {getFieldDecorator('phone', {})(<Input placeholder="请填写手机号码" />)}
+                            {getFieldDecorator('phone', {
+                                initialValue: formContainer.phone || '',
+                                rules: [{ required: true, message: '请填写手机号' }]
+                            })(<Input placeholder="请填写手机号码" />)}
                         </Form.Item>
                         <Form.Item label="邮箱地址" style={{ marginBottom: '5px' }}>
-                            {getFieldDecorator('email', {})(<Input placeholder="请填写邮箱地址" />)}
+                            {getFieldDecorator('email', {
+                                initialValue: formContainer.email || ''
+                            })(<Input placeholder="请填写邮箱地址" />)}
                         </Form.Item>
                         <Form.Item label="所属部门" style={{ marginBottom: '5px' }}>
                             {getFieldDecorator('department', {
-                                initialValue: [],
+                                initialValue: formContainer.department || [],
                                 rules: [{ required: true, message: '请选择所属部门' }],
                             })(
                                 <Select placeholder="请选择所属部门">
@@ -293,7 +272,7 @@ class Index extends Component {
                         </Form.Item>
                         <Form.Item label="当前职位" style={{ marginBottom: '5px' }}>
                             {getFieldDecorator('position', {
-                                initialValue: [],
+                                initialValue: formContainer.position || [],
                                 rules: [{ required: true, message: '请选择当前职位' }],
                             })(
                                 <Select placeholder="请选择当前职位">
@@ -305,16 +284,19 @@ class Index extends Component {
                         <Form.Item label="微信号" style={{ marginBottom: '5px' }}>
                             {getFieldDecorator('wechat', {
                                 rules: [{ required: true, message: '请填写微信号' }],
+                                initialValue: formContainer.wechat || ''
                             })(<Input placeholder="请填写微信号" />)}
                         </Form.Item>
                         <Form.Item label="对外昵称" style={{ marginBottom: '5px' }}>
                             {getFieldDecorator('nickname', {
                                 rules: [{ required: true, message: '请填写对外昵称' }],
+                                initialValue: formContainer.nickname || ''
                             })(<Input placeholder="请填写对外昵称" />)}
                         </Form.Item>
                         <Form.Item label="服务领域" style={{ marginBottom: '5px' }}>
                             {getFieldDecorator('attention', {
                                 rules: [{ required: true, message: '请选择服务领域' }],
+                                initialValue: formContainer.attention || []
                             })(<CheckboxGroup options={plainOptions} />)}
                         </Form.Item>
                         <div className={styles.reminder}>注：选择服务领域，服务商可以成为该服务领域的专属服务商客服。</div>
