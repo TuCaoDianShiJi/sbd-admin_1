@@ -2,7 +2,8 @@ import React, { Component } from 'react';
 import { Table, Button, Divider, Icon, Modal, Form, Input, Checkbox, Select, Cascader, Tooltip, Spin, message } from 'antd';
 import { PageHeaderWrapper } from '@ant-design/pro-layout';
 import request from '../../utils/request';
-import { getAllocateGroupList, getCustServiceAll, addAllocateGroup } from '@/services';
+import { getAllocateGroupList, getCustServiceAll, addAllocateGroup, delAllocateGrop, upAllocateGroup } from '@/services';
+import getTimeSetting from '@/utils/getTimeSetting';
 
 import styles from './setting.less';
 
@@ -61,10 +62,15 @@ class Index extends Component {
     constructor(props) {
         super(props);
         this.state = {
-            dataList: [],
-            showModalForm: false,
-            serviceAllOptions: [],
-            formSubmitLoading: false
+            groupList: [],                          // 分组列表
+            showModalForm: false,                   // 是否显示modal弹框
+            serviceAllOptions: [],                  
+            formSubmitLoading: false,                // modal加载状态
+            total: '',                               // 总条数
+            page: 1,                                 // 当前页
+            limit: 10,                               // 分页长度
+            groupContainer: {},
+            showTableLoding: false                  // 表格加载状态                    
         };
     }
 
@@ -74,57 +80,67 @@ class Index extends Component {
     }
 
     // 获取所有员工列表(只有id和name)
-    getServiceAll(){
+    getServiceAll = async () => {
         let _that = this;
-        getCustServiceAll()
-        .then(res=>{
-            let list = [];
-            if(res.status === 200){
-                res.data.map(item=>{
-                    list.push({
-                        label: item.name,
-                        value: item.id
-                    })
-                })
-                console.log(list);
-                _that.setState({
-                    serviceAllOptions: list
-                })
-            }
-        })
-        .catch(err=>{
-            console.log(err)
-        })
+        let res = await getCustServiceAll();
+        let list = [];
+        if(res.status === 200){
+            res.data.map(item=>{
+                list.push({ label: item.name, value: item.id })
+            })
+            _that.setState({
+                serviceAllOptions: list
+            })
+        }
     }
 
     // 获取分组列表
-    getList() {
+    getList = async () => {
         const _that = this;
-        request('/reception/list')
-            .then(res => {
-                res.data.map(item => (item.key = item.id));
-                _that.setState({
-                    dataList: res.data,
-                });
+        const { page, limit } = _that.state;
+        let data = { page, limit };
+        let res = await getAllocateGroupList(data);
+        _that.setState({ showTableLoding: true })
+        if(res.status === 200){
+            res.data.map(item => item.key = item.id);
+            _that.setState({
+                groupList: res.data,
+                total: res.total,
+                showTableLoding: false
             })
-            .catch(err => {
-                console.log(err);
-            });
+        }
     }
 
     // 编辑按钮
     onEditItem(item) {
-        console.log(item);
+        let _list = [];
+        item.cust_id_name.map(i=>_list.push(parseInt(i.id)))
+        let data = {
+            id: item.id,
+            group_name: item.cust_group,
+            receiver: _list,
+            allocate_object: item.dist_user,
+            allocate_order: JSON.parse(item.dist_order),
+            timeout: item.overtime_reminder,
+            again_allocate: item.redistribution,
+            marked_words: item.user_tips
+        }
+        this.getServiceAll();
+        this.setState({
+            groupContainer: data,
+            showModalForm: true
+        })
     }
 
     // 删除按钮
     onDeletItem(item) {
-        console.log(item);
+        let _that = this;
         Modal.confirm({
-            title: `确定删除 ${item.group_name} 分组吗？`,
+            title: `确定删除 ${item.cust_group} 分组吗？`,
             okText: '删除',
             okType: 'danger',
             cancelText: '取消',
+            onOk: ()=>_that.DelAllocateGrop(item.id)
         });
     }
 
@@ -136,26 +152,57 @@ class Index extends Component {
         });
     }
 
+    // 新增分组 
+    AddAllocateGroup = async(params) => {
+        let res = await addAllocateGroup(params);
+        const _that = this;
+        if(res.status === 200){
+            message.success('新增分组成功')
+            _that.setState({
+                formSubmitLoading: false,
+            })
+            _that.closeFormModal();
+            this.getList();
+        }
+    }
+
+    // 编辑分组
+    UpAllocateGroup = async(params)=>{
+        let res = await upAllocateGroup(params);
+        const _that = this;
+        if(res.status === 200){
+            message.success('更新分组成功')
+            _that.setState({
+                formSubmitLoading: false,
+            })
+            _that.closeFormModal();
+            this.getList();
+        }
+    }
+
+    // 删除分组
+    DelAllocateGrop = async (id) =>{
+        let res = await delAllocateGrop(id);
+        if(res.status === 200){
+            message.success("删除分组成功");
+            this.getList();
+        }
+    }
+
     // 提交新建会话分组表单
     handleSubmit = e => {
-        const _that = this;
         e.preventDefault();
-        this.props.form.validateFields((err, values) => {
+        const _that = this;
+        let { groupContainer } = _that.state;
+        this.props.form.validateFields( async (err, values) => {
             if (!err) {
-                _that.setState({
-                    formSubmitLoading: true
-                })
-                addAllocateGroup(values)
-                .then(res=>{
-                    message.success('新增分组成功')
-                    _that.setState({
-                        formSubmitLoading: false,
-                    })
-                    _that.closeFormModal();
-                })
-                .catch(err=>{
-                    console.log(err)
-                })
+                _that.setState({ formSubmitLoading: true })
+                if(groupContainer.id){
+                    values.id = groupContainer.id;
+                    _that.UpAllocateGroup(values);
+                }else{
+                    _that.AddAllocateGroup(values)
+                }
             }
         });
     };
@@ -164,45 +211,87 @@ class Index extends Component {
     closeFormModal(){
         this.props.form.resetFields();
         this.setState({
-            showModalForm: false
+            showModalForm: false,
+            groupContainer: {}
         })
     }
 
+    // 切换分页数
+    onPageChange = (page, pageSize)=>{
+        this.setState({
+            page: page,
+            limit: pageSize
+        }, ()=>this.getList())
+    }
+
+    // 分页分页长度
+    onShowSizeChange = (current, size)=>{
+        this.setState({
+            page: current,
+            limit: size
+        }, ()=>this.getList())
+    }
+
     render() {
-        const { dataList, showModalForm, serviceAllOptions, formSubmitLoading } = this.state;
+        const { groupList, showModalForm, serviceAllOptions, formSubmitLoading, total, groupContainer, showTableLoding } = this.state;
         const { getFieldDecorator } = this.props.form;
         const columns = [
             {
                 title: '分组名称',
-                dataIndex: 'group_name',
-                key: 'group_name',
+                dataIndex: 'cust_group',
+                key: 'cust_group',
                 align: 'center',
                 width: 120,
                 render: id => <span>{id}</span>,
             },
             {
                 title: '接待人',
-                dataIndex: 'name',
-                key: 'name',
-                align: 'center',
-                width: 100,
-                render: name => <span>{name}</span>,
-            },
-            {
-                title: '组内分配规则',
-                dataIndex: 'rule',
-                key: 'rule',
+                dataIndex: 'cust_id_name',
+                key: 'cust_id_name',
                 align: 'center',
                 width: 150,
-                render: text => <span>{text}</span>,
+                render: cust_id_name =>{
+                    let _list = [];
+                    if(cust_id_name.length < 4){
+                        cust_id_name.map(item=>_list.push(item.name));
+                        let a = _list.join('，');
+                        return <span>{a}</span>
+                    }
+                    cust_id_name.map((item, index)=>{
+                        if(index<3) _list.push(item.name);
+                    });
+                    let a = _list.join('，');
+                    return <span>{a}...等{cust_id_name.length}人</span>
+                    
+                },
+            },
+            {
+                title: '分配规则',
+                dataIndex: 'dist_order',
+                key: 'dist_order',
+                align: 'center',
+                width: 200,
+                render: dist_order => {
+                    let a = JSON.parse(dist_order);
+                    let b = a.join('>');
+                    return b
+                },
             },
             {
                 title: '超时提醒及重新分配',
-                dataIndex: 'remind',
                 key: 'remind',
                 align: 'center',
-                width: 200,
-                render: text => <span>{text}</span>,
+                width: 150,
+                render: text=>{
+                    let a = '-', b = '-';
+                    if(text.overtime_reminder){
+                        a = `超时提醒：${getTimeSetting(text.overtime_reminder)}`;
+                    }
+                    if(text.redistribution){
+                        b = `重新分配：${getTimeSetting(text.redistribution)}`;
+                    }
+                    return <span>{a}<br/>{b}</span>
+                }
             },
             {
                 title: '操作',
@@ -233,11 +322,19 @@ class Index extends Component {
         return (
             <PageHeaderWrapper>
                 <div className={styles.receptionSetting}>
-                    <Button type="primary" icon="plus" onClick={this.addGroup.bind(this)}>
-                        新建分组
-          </Button>
+                    <Button type="primary" icon="plus" onClick={this.addGroup.bind(this)}> 新建分组</Button>
                 </div>
-                <Table bordered columns={columns} dataSource={dataList} />
+                <Table bordered columns={columns} dataSource={groupList} 
+                    loading={showTableLoding}
+                    pagination={{
+                        total: total,
+                        showSizeChanger: true,
+                        pageSizeOptions: ['10', '15', '20'],
+                        showTotal:total=>`共找到 ${total} 条数据`,
+                        onChange:this.onPageChange.bind(this),
+                        onShowSizeChange: this.onShowSizeChange.bind(this)
+                    }}
+                />
                 <Modal maskClosable={false}
                     visible={showModalForm}
                     title="新增分组"
@@ -249,21 +346,22 @@ class Index extends Component {
                     <Form {...formItemLayout} onSubmit={this.handleSubmit.bind(this)}>
                         <Form.Item label="分组名称" style={{ marginBottom: '10px' }}>
                             {getFieldDecorator('group_name', {
+                                initialValue: groupContainer.group_name || '',
                                 rules: [{ required: true, message: '请填写分组名称' }],
                             })(<Input placeholder="请填写分组名称" />)}
                         </Form.Item>
                         <Form.Item label="接待人" style={{ marginBottom: '10px' }}>
                             {getFieldDecorator('receiver', {
+                                initialValue: groupContainer.receiver || [],
                                 rules: [{ required: true, message: '请选择接待人' }],
                             })(<CheckboxGroup options={serviceAllOptions} />)}
                         </Form.Item>
                         <Form.Item label="分配对象" style={{ marginBottom: '10px' }}>
                             {getFieldDecorator('allocate_object', {
-                                initialValue: 'PC端或移动端在线的员工',
+                                initialValue: '移动端在线的员工',
                             })(
                                 <Select>
-                                    <Option value="PC端或移动端在线的员工">PC端或移动端在线的员工</Option>
-                                    <Option value="仅PC端在线的员工">仅PC端在线的员工</Option>
+                                    <Option value="移动端在线的员工">移动端在线的员工</Option>
                                 </Select>,
                             )}
                         </Form.Item>
@@ -271,7 +369,7 @@ class Index extends Component {
                             extra="优先级从前往后(如果前面的条件不存在，会自动执行后面的条件)"
                         >
                             {getFieldDecorator('allocate_order', {
-                                initialValue: ['轮流分配']
+                                initialValue: groupContainer.allocate_order || ['轮流分配'],
                             })(<Cascader options={orderOptions} style={{width: '380px', marginRight: '15px'}}/>
                             )}
                             <Tooltip title={toolTip}>
@@ -280,7 +378,7 @@ class Index extends Component {
                         </Form.Item>
                         <Form.Item label="超时提醒" style={{ marginBottom: '10px' }}>
                             超过 {getFieldDecorator('timeout', {
-                                initialValue: 0,
+                                initialValue: groupContainer.timeout || 0,
                             })(
                                 <Select style={{ width: '95px' }}>
                                     <Option value={0}>不设置</Option>
@@ -295,7 +393,7 @@ class Index extends Component {
                         </Form.Item>
                         <Form.Item label="重新分配" style={{ marginBottom: '10px' }}>
                             超过 {getFieldDecorator('again_allocate', {
-                                initialValue: 0,
+                                initialValue: groupContainer.again_allocate || 0,
                             })(<Select style={{ width: '95px' }}>
                                     <Option value={0}>不设置</Option>
                                     <Option value={30}>30秒</Option>
@@ -309,7 +407,7 @@ class Index extends Component {
                         </Form.Item>
                         <Form.Item label="客服提示语" style={{ marginBottom: '10px' }}>
                             {getFieldDecorator('marked_words', {
-                                initialValue: '客服正忙，推荐您联系转接客服，感谢理解！',
+                                initialValue: groupContainer.marked_words || '客服正忙，推荐您联系转接客服，感谢理解！'
                             })(<Input />
                             )}
                         </Form.Item>

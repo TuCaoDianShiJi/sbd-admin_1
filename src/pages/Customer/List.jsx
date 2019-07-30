@@ -154,6 +154,7 @@ class Index extends Component{
                     pagination={{
                         total: customerList.total,
                         showSizeChanger: true,
+                        showTotal:total=>`共找到 ${total} 条数据`,
                         onChange:this.onPageChange.bind(this),
                         pageSizeOptions: ['10', '15', '20'],
                         onShowSizeChange: this.onShowSizeChange.bind(this)

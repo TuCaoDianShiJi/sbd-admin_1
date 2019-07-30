@@ -1,11 +1,10 @@
 import React, { Component } from 'react';
 import { PageHeaderWrapper } from '@ant-design/pro-layout';
 import { Form, Input, Select, Button } from 'antd';
+import { getCustServiceAll } from '@/services';
 
 import styles from './record.less';
 
-const serviData = ['张波', '王玉龙', '欧宜', '袁佳伟'];
-const customerData = ['杨过', '张无忌', '令狐冲'];
 const { Search } = Input;
 const { Option } = Select;
 
@@ -13,9 +12,13 @@ class Index extends Component {
     constructor(props) {
         super(props);
         this.state = {
-            serviData: [],
-            customerData: []
+            serviceList: [],            // 客服列表
+            customerList: []            // 客户列表
         };
+    }
+
+    componentDidMount(){
+        this.getServiceList();
     }
 
     // 提交查询表单
@@ -28,12 +31,26 @@ class Index extends Component {
         });
     }
 
+    // 获取所有员工列表id和name
+    getServiceList = async () =>{
+        let res = await getCustServiceAll();
+        let list = [];
+        const _that = this;
+        if(res.status === 200){
+            res.data.map(item=>list.push({ label: item.name, value: item.id }))
+            _that.setState({
+                serviceList: list
+            })
+        }
+    }
+
     // 选择员工下拉框改变，然后请求对应客户列表的接口
     onSelectChange = e =>{
-        
+        console.log(e)
     }
 
     render() {
+        const { serviceList, customerList } = this.state;
         const { getFieldDecorator } = this.props.form;
         return (
             <PageHeaderWrapper>
@@ -49,7 +66,7 @@ class Index extends Component {
                             }
                         >
                             <Option value=''>请选择或输入查询</Option>
-                            { serviData.map((item, index)=><Option key={index}>{item}</Option>) }
+                            { serviceList.map((item, index)=><Option key={index} value={item.value}>{item.label}</Option>) }
                         </Select>)}
                     </Form.Item>
                     <Form.Item label='客户姓名'>
@@ -62,7 +79,7 @@ class Index extends Component {
                             }
                         >
                             <Option value=''>请选择或输入查询</Option>
-                            { customerData.map((item, index)=><Option key={index}>{item}</Option>) }
+                            { customerList.map((item, index)=><Option key={index}>{item}</Option>) }
                         </Select>)}
                     </Form.Item>
                     <Form.Item>

@@ -26,14 +26,14 @@ const UserModel = {
                 yield put(routerRedux.replace('/user/login'));
                 return;
             }
-            // let userInfo = {
-            //     name: response.user.usr_name,
-            //     avatar: response.user.usr_image_url
-            // }
             let userInfo = {
-                name: '吐槽电视机',
+                name: response.user.usr_name,
                 avatar: 'https://gw.alipayobjects.com/zos/antfincdn/XAosXuNZyF/BiazfanxmamNRoxxVxka.png'
             }
+            // let userInfo = {
+            //     name: '吐槽电视机',
+            //     avatar: 'https://gw.alipayobjects.com/zos/antfincdn/XAosXuNZyF/BiazfanxmamNRoxxVxka.png'
+            // }
 
             yield put({
                 type: 'saveCurrentUser',

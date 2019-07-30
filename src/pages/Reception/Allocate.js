@@ -1,41 +1,30 @@
 import React, { Component } from 'react';
 import { PageHeaderWrapper } from '@ant-design/pro-layout';
-import {
-    InputNumber,
-    Button,
-    Select,
-    Table,
-    Divider,
-    Icon,
-    Row,
-    Col,
-    Modal,
-    Form,
-    Checkbox,
-    Spin,
-    Input
-} from 'antd';
+import { InputNumber, Button, Select, Table, Divider, Icon, Row, Col, Modal, Form, Checkbox, Spin, Input, message } from 'antd';
 import request from '../../utils/request';
 import img1 from '../../assets/allocate_01.png';
 import img2 from '../../assets/allocate_02.png';
 import img3 from '../../assets/allocate_03.png';
 import img4 from '../../assets/allocate_04.png';
 import styles from './allocate.less';
+import { getAllocateGroupList, upAllocateGroup, delAllocateGrop } from '@/services';
+import getTimeSetting from '@/utils/getTimeSetting';
 
 const { Option } = Select;
+const { confirm } = Modal;
 const CheckboxGroup = Checkbox.Group;
 
 const timeList = [
-    '3分钟',
-    '5分钟',
-    '10分钟',
-    '20分钟',
-    '30分钟',
-    '1小时',
-    '2小时',
-    '3小时',
-    '6小时',
-    '12小时',
+    { label: '3分钟', value: 3 },
+    { label: '5分钟', value: 5 },
+    { label: '10分钟', value: 10 },
+    { label: '20分钟', value: 20 },
+    { label: '30分钟', value: 30 },
+    { label: '1小时', value: 60 },
+    { label: '2小时', value: 120 },
+    { label: '3小时', value: 180 },
+    { label: '6小时', value: 360 },
+    { label: '12小时', value: 720 },
 ];
 const checkList = ['张波', '王玉龙', '欧宜', '袁佳伟'];
 
@@ -45,7 +34,16 @@ class Index extends Component {
         this.state = {
             groupList: [],
             showModalForm1: false,
-            showModalForm2: false
+            showModalForm2: false,
+            page: 1,                            // 当前页
+            limit: 5,                           // 分页长度
+            total: '',                          // 数据总条数
+            showTableLoding: false,             // 表格加载状态
+            groupModalContainer: {},
+            timeOutSetting: '',                 // 超时设置/超时提醒
+            againOrderSetting: '',              // 超时设置/重新分配
+            serviceMark: '',                    // 超时设置/客服提示语
+            showForm2Loading: false,            // 超时设置loading
         };
     }
 
@@ -54,18 +52,20 @@ class Index extends Component {
     }
 
     // 获取分组列表
-    getGroupList() {
+    getGroupList = async () => {
         const _that = this;
-        request('/reception/groupList')
-            .then(res => {
-                res.data.map(item => (item.key = item.id));
-                _that.setState({
-                    groupList: res.data,
-                });
+        const { page, limit } = _that.state;
+        let data = { page, limit };
+        let res = await getAllocateGroupList(data);
+        _that.setState({ showTableLoding: true })
+        if(res.status === 200){
+            res.data.map(item => item.key = item.id);
+            _that.setState({
+                groupList: res.data,
+                total: res.total,
+                showTableLoding: false
             })
-            .catch(err => {
-                console.log(err);
-            });
+        }
     }
 
     // 个别员工设置上限按钮
@@ -88,28 +88,98 @@ class Index extends Component {
     // 点击超时设置编辑按钮
     onEditRules(item){
         this.setState({
-            showModalForm2: true
+            showModalForm2: true,
+            groupModalContainer: item
         })
     }
 
+    // 点击超时设置删除按钮
+    onDelRules(item){
+        const _that = this;
+        confirm({
+            title: `确定删除 ${item.cust_group} 分组?`,
+            okText: '删除',
+            okType: 'danger',
+            cancelText: '取消',
+            onOk: ()=>_that.DelAllocateGrop(item.id)
+        })
+    }
+
+    // 提交更新分组设置
+    onSubmitEdit(){
+        let { groupModalContainer, timeOutSetting, againOrderSetting, serviceMark } = this.state;
+        groupModalContainer.overtime_reminder = timeOutSetting || groupModalContainer.overtime_reminder;
+        groupModalContainer.redistribution = againOrderSetting || groupModalContainer.redistribution;
+        groupModalContainer.user_tips = serviceMark || groupModalContainer.user_tips;
+        let data = {
+            id: groupModalContainer.id,
+            group_name: groupModalContainer.cust_group,
+            receiver: groupModalContainer.cust_service_id,
+            allocate_order: groupModalContainer.dist_order,
+            allocate_object: groupModalContainer.dist_user,
+            timeout: groupModalContainer.overtime_reminder,
+            again_allocate: againOrderSetting || groupModalContainer.redistribution,
+            marked_words: serviceMark || groupModalContainer.user_tips
+        }
+        this.setState({ showForm2Loading: true })
+        this.UpAllocateGroup(data);
+    }
+
+    // 更新分组
+    UpAllocateGroup = async(params)=>{
+        let res = await upAllocateGroup(params);
+        const _that = this;
+        if(res.status === 200){
+            message.success('更新分组成功')
+            _that.getGroupList();
+            _that.setState({
+                showModalForm2: false,
+                showForm2Loading: false,
+                groupModalContainer: {}
+            })
+        }
+    }
+
+    // 删除分组
+    DelAllocateGrop = async (id) =>{
+        let res = await delAllocateGrop(id);
+        if(res.status === 200){
+            message.success("删除分组成功");
+            this.getGroupList();
+        }
+    }
+
+    // 获取超时结束会话时长
+    getTimeoutSetting(){
+        
+    }
+
     render() {
-        const { groupList, showModalForm1, showModalForm2 } = this.state;
+        const { groupList, showModalForm1, showModalForm2, showTableLoding, groupModalContainer } = this.state;
         const columns = [
             {
                 title: '分组名称',
-                dataIndex: 'group_name',
-                key: 'group_name',
+                dataIndex: 'cust_group',
+                key: 'cust_group',
                 align: 'center',
                 width: 100,
                 render: name => <span>{name}</span>,
             },
             {
                 title: '超时设置',
-                dataIndex: 'rule',
-                key: 'rule',
+                key: 'setting',
                 align: 'center',
                 width: 120,
-                render: name => <span>{name}</span>,
+                render: text => {
+                    let a = '-', b = '-';
+                    if(text.overtime_reminder){
+                        a = `超时提醒：${getTimeSetting(text.overtime_reminder)}`;
+                    }
+                    if(text.redistribution){
+                        b = `重新分配：${getTimeSetting(text.redistribution)}`;
+                    }
+                    return <span>{a}<br/>{b}</span>
+                },
             },
             {
                 title: '操作',
@@ -121,8 +191,8 @@ class Index extends Component {
                         <a onClick={this.onEditRules.bind(this, record)}>
                             <Icon type="edit"/> 编辑
                         </a>
-                        {/* <Divider type="vertical" />
-                      <a><Icon type="delete" /> 删除</a> */}
+                        <Divider type="vertical" />
+                        <a onClick={this.onDelRules.bind(this, record)}><Icon type="delete" /> 删除</a>
                     </span>
                 ),
             },
@@ -155,9 +225,7 @@ class Index extends Component {
                             </h4>
                             <h4>
                                 个别员工接待上限{' '}
-                                <Button size="small" type="primary" onClick={this.onUpperLimit.bind(this)}>
-                                    添加
-                </Button>
+                                <Button size="small" type="primary" onClick={this.onUpperLimit.bind(this)}>添加</Button>
                             </h4>
                         </Col>
                     </Row>
@@ -183,8 +251,7 @@ class Index extends Component {
                             <div>
                                 <h3>超时设置</h3>
                                 <p>超时提醒、超时重新分配及超时结束会话规则</p>
-                                {/* <h4>分组设置 <Button type='primary' size='small'>添加</Button></h4> */}
-                                <Table bordered columns={columns} dataSource={groupList}></Table>
+                                <Table bordered columns={columns} dataSource={groupList} loading={showTableLoding}></Table>
                             </div>
                         </Col>
                     </Row>
@@ -198,12 +265,11 @@ class Index extends Component {
                                 超过{' '}
                                 <Select defaultValue="3分钟" style={{ width: '100px' }}>
                                     {timeList.map((item, index) => (
-                                        <Option value={item} key={index}>
-                                            {item}
+                                        <Option value={item.value} key={index}>
+                                            {item.label}
                                         </Option>
                                     ))}
-                                </Select>{' '}
-                                客户或接待员工未发送消息，则自动结束会话
+                                </Select>{' '}客户或接待员工未发送消息，则自动结束会话
               </h4>
                             <p>每次修改设置，将在第二天零点生效，同时影响所有统计报表的会话统计数量</p>
                         </Col>
@@ -244,45 +310,41 @@ class Index extends Component {
                     <Spin spinning={false}> 
                         <Form {...formItemLayout}>
                             <Form.Item label="超时提醒" style={{ marginBottom: '10px' }}>
-                                超过 {getFieldDecorator('timeout', {
-                                    initialValue: '',
-                                })(
-                                    <Select style={{ width: '95px' }}>
-                                        <Option value="">不设置</Option>
-                                        <Option value="30秒">30秒</Option>
-                                        <Option value="1分钟">1分钟</Option>
-                                        <Option value="1分30秒">1分30秒</Option>
-                                        <Option value="2分钟">2分钟</Option>
-                                        <Option value="2分20秒">2分20秒</Option>
-                                        <Option value="3分钟">3分钟</Option>
-                                    </Select>
-                                )} 接待人员未回复，发送超时提醒
+                                超过 <Select style={{ width: '95px' }} defaultValue={groupModalContainer.overtime_reminder}
+                                    onChange={e=>this.setState({ timeOutSetting: e })}
+                                >
+                                    <Option value={0}>不设置</Option>
+                                    <Option value={30}>30秒</Option>
+                                    <Option value={60}>1分钟</Option>
+                                    <Option value={90}>1分30秒</Option>
+                                    <Option value={120}>2分钟</Option>
+                                    <Option value={150}>2分20秒</Option>
+                                    <Option value={180}>3分钟</Option>
+                                </Select> 接待人员未回复，发送超时提醒
                             </Form.Item>
                             <Form.Item label="重新分配" style={{ marginBottom: '10px' }}>
-                                超过 {getFieldDecorator('again_allocate', {
-                                    initialValue: '',
-                                })(<Select style={{ width: '95px' }}>
-                                        <Option value="">不设置</Option>
-                                        <Option value="30秒">30秒</Option>
-                                        <Option value="1分钟">1分钟</Option>
-                                        <Option value="1分30秒">1分30秒</Option>
-                                        <Option value="2分钟">2分钟</Option>
-                                        <Option value="2分20秒">2分20秒</Option>
-                                        <Option value="3分钟">3分钟</Option>
-                                    </Select>
-                                )} 接待人员未回复，按空闲率进行重新分配
+                                超过 <Select style={{ width: '95px' }} defaultValue={groupModalContainer.redistribution}
+                                    onChange={e=>this.setState({ againOrderSetting: e })}
+                                >
+                                    <Option value={0}>不设置</Option>
+                                    <Option value={30}>30秒</Option>
+                                    <Option value={60}>1分钟</Option>
+                                    <Option value={90}>1分30秒</Option>
+                                    <Option value={120}>2分钟</Option>
+                                    <Option value={150}>2分20秒</Option>
+                                    <Option value={180}>3分钟</Option>
+                                </Select> 接待人员未回复，按空闲率进行重新分配
                             </Form.Item>
                             <Form.Item label="客服提示语" style={{ marginBottom: '10px' }}>
-                                {getFieldDecorator('marked_words', {
-                                    initialValue: '客服正忙，推荐您联系转接客服，感谢理解！',
-                                })(<Input />
-                                )}
+                                <Input defaultValue={groupModalContainer.user_tips}
+                                    onChange={e=>this.setState({ serviceMark: e.target.value })}
+                                />
                             </Form.Item>
                             <div className={styles.btnContent}>
                                 <Button className={styles.btn}
                                     onClick={_ => this.setState({ showModalForm2: false })}
                                 >取消</Button>
-                                <Button type="primary" htmlType="submit" className={styles.btn}>设置</Button>
+                                <Button type="primary" onClick={this.onSubmitEdit.bind(this)} className={styles.btn}>设置</Button>
                             </div>
                         </Form> 
                         </Spin>       
